@@ -8,13 +8,17 @@ var mainState = (function (_super) {
     __extends(mainState, _super);
     function mainState() {
         _super.apply(this, arguments);
-        this.UFO_SPEED = 200;
+        this.MAX_SPEED = 350; // pixels/second
+        this.ACCELERATION = 250; // aceleración
+        this.FUERZA_ROZAMIENTO = 100; // Aceleración negativa
     }
     mainState.prototype.preload = function () {
         _super.prototype.preload.call(this);
         this.load.image('ufo', 'assets/UFOLow.png');
         this.load.image('pickup', 'assets/PickupLow.png');
         this.load.image('background', 'assets/BackgroundLow.png');
+        // Declaramos el motor de físicas que vamos a usar
+        this.physics.startSystem(Phaser.Physics.ARCADE);
     };
     mainState.prototype.create = function () {
         _super.prototype.create.call(this);
@@ -27,34 +31,36 @@ var mainState = (function (_super) {
         this.ufo.anchor.setTo(0.5, 0.5);
         // Para el movimiento del platillo con las teclas
         this.cursor = this.input.keyboard.createCursorKeys();
+        // Activamos la fisica
+        this.physics.enable(this.ufo);
+        // Le damos una aceleración
+        this.ufo.body.maxVelocity.setTo(this.MAX_SPEED, this.MAX_SPEED); // x, y
+        // Fuerza de rozamiento
+        this.ufo.body.drag.setTo(this.FUERZA_ROZAMIENTO, this.FUERZA_ROZAMIENTO); // x, y
+        //velocidad maxima, colisiones y rebote
+        this.ufo.body.maxVelocity.setTo(this.MAX_SPEED, this.MAX_SPEED); // x, y
+        this.ufo.body.collideWorldBounds = true;
+        this.ufo.body.bounce.setTo(2);
     };
     mainState.prototype.update = function () {
         _super.prototype.update.call(this);
+        // Velocidad en el instante 0 del objeto
         // Movimientos en el eje X
-        if (this.ufo.x > 505) {
-            this.ufo.x = 505;
-        }
-        if (this.ufo.x < 95) {
-            this.ufo.x = 95;
-        }
         if (this.cursor.left.isDown) {
-            this.ufo.x = this.ufo.x - 10;
+            this.ufo.body.acceleration.x = -this.ACCELERATION;
         }
-        if (this.cursor.right.isDown) {
-            this.ufo.x = this.ufo.x + 10;
+        else if (this.cursor.right.isDown) {
+            this.ufo.body.acceleration.x = this.ACCELERATION;
         }
-        // Movimientos en el eje Y
-        if (this.ufo.y > 505) {
-            this.ufo.y = 505;
+        else if (this.cursor.up.isDown) {
+            this.ufo.body.acceleration.y = -this.ACCELERATION;
         }
-        if (this.ufo.y < 95) {
-            this.ufo.y = 95;
+        else if (this.cursor.down.isDown) {
+            this.ufo.body.acceleration.y = this.ACCELERATION;
         }
-        if (this.cursor.up.isDown) {
-            this.ufo.y = this.ufo.y - 10;
-        }
-        if (this.cursor.down.isDown) {
-            this.ufo.y = this.ufo.y + 10;
+        else {
+            this.ufo.body.acceleration.x = 0;
+            this.ufo.body.acceleration.y = 0;
         }
     };
     return mainState;
