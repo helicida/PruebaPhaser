@@ -4,16 +4,21 @@ class mainState extends Phaser.State {
 
     // Constantes
     private VELOCIDAD_MAXIMA = 350;    // pixels/second
+    private VELOCIDAD_ROTACION = 150;   // Velocidad de rotacion del satelite
     private ACCELERATION = 250; // aceleración
     private FUERZA_ROZAMIENTO = 100; // Aceleración negativa
+    // private FUERZA_ROZAMIENTO_ANGULAR = this.FUERZA_ROZAMIENTO * 1.3;   // Fuerza de rozamiento para la rotacion del UFO
+
+    private contador_recogidas = 0; // Contador para los recolectables recogidos
 
     // Sprite elementos
-    private ufo:Phaser.Sprite;
+    private ufo:Phaser.Sprite;          // Jugador platillo
+    private recolectable:Phaser.Sprite; // Recolectable
 
     // Otros recursos
-    private cursor:Phaser.CursorKeys;
-    private map:Phaser.Tilemap;
-    private paredes:Phaser.TilemapLayer;
+    private cursor:Phaser.CursorKeys;       // Para el movimiento del jugador
+    private map:Phaser.Tilemap;             // Map que contiene las partes del fondo
+    private paredes:Phaser.TilemapLayer;    // Paredes (Capa)
 
     preload():void {
         super.preload();
@@ -46,8 +51,9 @@ class mainState extends Phaser.State {
         // Activamos la fisica
         this.physics.enable(this.ufo);
 
-        // Le damos una aceleración
+        // Le damos una aceleración lineal y angular (para que rote sobre si mismo)
         this.ufo.body.maxVelocity.setTo(this.VELOCIDAD_MAXIMA, this.VELOCIDAD_MAXIMA); // x, y
+        //this.ufo.body.angularDrag = this.FUERZA_ROZAMIENTO_ANGULAR;
 
         // Fuerza de rozamiento
         this.ufo.body.drag.setTo(this.FUERZA_ROZAMIENTO, this.FUERZA_ROZAMIENTO); // x, y
@@ -57,6 +63,18 @@ class mainState extends Phaser.State {
         this.ufo.body.collideWorldBounds = true;
         this.ufo.body.bounce.setTo(0.7);
 
+        // RECOLECTABLES
+        this.recolectable = this.add.sprite(this.world.centerX, 170, 'pickup');
+
+        // Activamos la fisica
+        this.physics.enable(this.recolectable);
+        this.recolectable.anchor.setTo(0.5, 0.5);
+        this.recolectable.body.angularVelocity = this.VELOCIDAD_ROTACION;
+    }
+
+    private recogerRecolectable() {
+        this.contador_recogidas++;  // Sumamos al contador
+        this.recolectable.kill();   // Nos cargamos el sprite
     }
 
     private generarParedes() {
@@ -76,7 +94,14 @@ class mainState extends Phaser.State {
     update():void {
         super.update();
 
-        // Velocidad en el instante 0 del objeto
+        // Colisiones del jugador (UFO) con las paredes
+        this.physics.arcade.collide(this.ufo, this.paredes);
+
+        /* Overlap es similar a un trigger de colision. Es decir, gestiona las colisiones pero no de manera "física"
+        de los objetos, al superponerse los objetos, ejcuta código*/
+        this.physics.arcade.overlap(this.ufo, this.recolectable, this.recogerRecolectable, null, this);
+
+        // this.ufo.body.angularAcceleration = 100;
 
         // Movimientos en el eje X
         if (this.cursor.left.isDown) {
@@ -96,13 +121,29 @@ class mainState extends Phaser.State {
     }
 }
 
+class Recolectable extends Phaser.Sprite{
+
+    // Constructor con una velocidad angular fija y las fisicas activadas
+    constructor(game:Phaser.Game, x:number, y:number, key:string|Phaser.RenderTexture|Phaser.BitmapData|PIXI.Texture, frame:string|number) {
+        super(game, x, y, key, frame);
+
+        this.game.physics.enable(this);
+        this.body.angularVelocity = 150;
+    }
+
+    // Metodo update
+    update():void {
+        super.update();
+
+    }
+}
+
 class SimpleGame {
     game:Phaser.Game;
 
     constructor() {
         // Tamaño del juego, etc
         this.game = new Phaser.Game(600, 600, Phaser.AUTO, 'gameDiv');
-
         this.game.state.add('main', mainState);
         this.game.state.start('main');
     }
