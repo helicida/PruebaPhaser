@@ -3,10 +3,10 @@ class mainState extends Phaser.State {
     game: Phaser.Game;
 
     // Constantes
-    private VELOCIDAD_MAXIMA = 350;    // pixels/second
+    private VELOCIDAD_MAXIMA = 350;     // pixels/second
     private VELOCIDAD_ROTACION = 150;   // Velocidad de rotacion del satelite
-    private ACCELERATION = 250; // aceleración
-    private FUERZA_ROZAMIENTO = 100; // Aceleración negativa
+    private ACCELERATION = 250;         // aceleración
+    private FUERZA_ROZAMIENTO = 100;    // Aceleración negativa
     // private FUERZA_ROZAMIENTO_ANGULAR = this.FUERZA_ROZAMIENTO * 1.3;   // Fuerza de rozamiento para la rotacion del UFO
 
     private contador_recogidas = 0; // Contador para los recolectables recogidos
@@ -25,7 +25,7 @@ class mainState extends Phaser.State {
 
         // Precargamos las imagenes del platillo
         this.load.image('ufo', 'assets/UFOLow.png');
-        this.load.image('pickup', 'assets/PickupLow.png');
+        this.load.image('recolectable', 'assets/PickupLow.png');
 
         // Precargamos el fondo a traves del tieleset
         this.game.load.tilemap('tilemap', 'assets/Background.json', null, Phaser.Tilemap.TILED_JSON);
@@ -64,17 +64,27 @@ class mainState extends Phaser.State {
         this.ufo.body.bounce.setTo(0.7);
 
         // RECOLECTABLES
-        this.recolectable = this.add.sprite(this.world.centerX, 170, 'pickup');
+        this.recolectable = this.add.sprite(this.world.centerX, 170, 'recolectable');
 
         // Activamos la fisica
         this.physics.enable(this.recolectable);
-        this.recolectable.anchor.setTo(0.5, 0.5);
-        this.recolectable.body.angularVelocity = this.VELOCIDAD_ROTACION;
+
+        // Le damos una aceleración lineal y angular (para que rote sobre si mismo)
+        this.recolectable.body.maxVelocity.setTo(this.VELOCIDAD_MAXIMA, this.VELOCIDAD_MAXIMA); // x, y
+        //this.ufo.body.angularDrag = this.FUERZA_ROZAMIENTO_ANGULAR;
+
+        // Fuerza de rozamiento
+        this.recolectable.body.drag.setTo(this.FUERZA_ROZAMIENTO, this.FUERZA_ROZAMIENTO); // x, y
+
+        //velocidad maxima, colisiones y rebote
+        this.recolectable.body.maxVelocity.setTo(this.VELOCIDAD_MAXIMA, this.VELOCIDAD_MAXIMA); // x, y
+        this.recolectable.body.collideWorldBounds = true;
+        this.recolectable.body.bounce.setTo(0.7);
     }
 
     private recogerRecolectable() {
-        this.contador_recogidas++;  // Sumamos al contador
-        this.recolectable.kill();   // Nos cargamos el sprite
+        this.contador_recogidas ++;  // Sumamos al contador
+        this.recolectable.kill();    // Nos cargamos el sprite
     }
 
     private generarParedes() {
@@ -96,24 +106,27 @@ class mainState extends Phaser.State {
 
         // Colisiones del jugador (UFO) con las paredes
         this.physics.arcade.collide(this.ufo, this.paredes);
+        this.physics.arcade.collide(this.recolectable, this.paredes)
 
         /* Overlap es similar a un trigger de colision. Es decir, gestiona las colisiones pero no de manera "física"
         de los objetos, al superponerse los objetos, ejcuta código*/
         this.physics.arcade.overlap(this.ufo, this.recolectable, this.recogerRecolectable, null, this);
 
-        // this.ufo.body.angularAcceleration = 100;
-
         // Movimientos en el eje X
         if (this.cursor.left.isDown) {
             this.ufo.body.acceleration.x = -this.ACCELERATION;
+            this.recolectable.body.acceleration.x = this.ACCELERATION/2;
         } else if (this.cursor.right.isDown) {
-            this.ufo.body.acceleration.x = this.ACCELERATION;
+            this.ufo.body.acceleration.x = this.ACCELERATION/2;
+            this.recolectable.body.acceleration.x = -this.ACCELERATION/2;
 
             // Movimientos en el eje Y
         } else if (this.cursor.up.isDown) {
             this.ufo.body.acceleration.y = -this.ACCELERATION;
+            this.recolectable.body.acceleration.y = this.ACCELERATION/2;
         } else if (this.cursor.down.isDown) {
             this.ufo.body.acceleration.y = this.ACCELERATION;
+            this.recolectable.body.acceleration.y = -this.ACCELERATION/2;
         } else {
             this.ufo.body.acceleration.x = 0;
             this.ufo.body.acceleration.y = 0;
