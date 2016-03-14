@@ -4,6 +4,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 /// <reference path="phaser/phaser.d.ts"/>
+var Point = Phaser.Point;
 var mainState = (function (_super) {
     __extends(mainState, _super);
     function mainState() {
@@ -20,7 +21,7 @@ var mainState = (function (_super) {
         _super.prototype.preload.call(this);
         // Precargamos las imagenes del platillo
         this.load.image('ufo', 'assets/UFOLow.png');
-        this.load.image('pickup', 'assets/PickupLow.png');
+        this.load.image('recolectable', 'assets/PickupLow.png');
         // Precargamos el fondo a traves del tieleset
         this.game.load.tilemap('tilemap', 'assets/Background.json', null, Phaser.Tilemap.TILED_JSON);
         this.game.load.image('tiles', 'assets/BackgroundLow.png');
@@ -47,16 +48,36 @@ var mainState = (function (_super) {
         this.ufo.body.maxVelocity.setTo(this.VELOCIDAD_MAXIMA, this.VELOCIDAD_MAXIMA); // x, y
         this.ufo.body.collideWorldBounds = true;
         this.ufo.body.bounce.setTo(0.7);
-        // RECOLECTABLES
-        this.recolectable = this.add.sprite(this.world.centerX, 170, 'pickup');
-        // Activamos la fisica
-        this.physics.enable(this.recolectable);
-        this.recolectable.anchor.setTo(0.5, 0.5);
-        this.recolectable.body.angularVelocity = this.VELOCIDAD_ROTACION;
+        // Pickups
+        this.crearRecolectables();
     };
-    mainState.prototype.recogerRecolectable = function () {
+    mainState.prototype.crearRecolectables = function () {
+        // Anyadimos el recolectable a un grupo
+        this.recolectables = this.add.group();
+        this.recolectables.enableBody = true;
+        // Posiciones en las que generaremos los recolectables
+        var positions = [
+            new Point(300, 95),
+            new Point(190, 135), new Point(410, 135),
+            new Point(120, 200), new Point(480, 200),
+            new Point(95, 300), new Point(505, 300),
+            new Point(120, 405), new Point(480, 405),
+            new Point(190, 465), new Point(410, 465),
+            new Point(300, 505),
+        ];
+        // Colocamos los sprites en sus coordenadas a traves de un for
+        for (var i = 0; i < positions.length; i++) {
+            var position = positions[i];
+            // instanciamos el Sprite
+            var recolectable = new Recolectable(this.game, position.x, position.y, 'recolectable', 0);
+            // mostramos el Sprite por pantalla
+            this.add.existing(recolectable);
+            this.recolectables.add(recolectable);
+        }
+    };
+    mainState.prototype.recogerRecolectable = function (ufo, recolectable) {
         this.contador_recogidas++; // Sumamos al contador
-        this.recolectable.kill(); // Nos cargamos el sprite
+        recolectable.kill(); // Nos cargamos el sprite
     };
     mainState.prototype.generarParedes = function () {
         // Referencia al tilemap y al fondo
@@ -75,14 +96,13 @@ var mainState = (function (_super) {
         this.physics.arcade.collide(this.ufo, this.paredes);
         /* Overlap es similar a un trigger de colision. Es decir, gestiona las colisiones pero no de manera "física"
         de los objetos, al superponerse los objetos, ejcuta código*/
-        this.physics.arcade.overlap(this.ufo, this.recolectable, this.recogerRecolectable, null, this);
-        // this.ufo.body.angularAcceleration = 100;
+        this.physics.arcade.overlap(this.ufo, this.recolectables, this.recogerRecolectable, null, this);
         // Movimientos en el eje X
         if (this.cursor.left.isDown) {
             this.ufo.body.acceleration.x = -this.ACCELERATION;
         }
         else if (this.cursor.right.isDown) {
-            this.ufo.body.acceleration.x = this.ACCELERATION;
+            this.ufo.body.acceleration.x = this.ACCELERATION / 2;
         }
         else if (this.cursor.up.isDown) {
             this.ufo.body.acceleration.y = -this.ACCELERATION;
@@ -102,6 +122,7 @@ var Recolectable = (function (_super) {
     // Constructor con una velocidad angular fija y las fisicas activadas
     function Recolectable(game, x, y, key, frame) {
         _super.call(this, game, x, y, key, frame);
+        this.anchor.setTo(0.5, 0.5);
         this.game.physics.enable(this);
         this.body.angularVelocity = 150;
     }

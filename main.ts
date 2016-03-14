@@ -1,4 +1,5 @@
 /// <reference path="phaser/phaser.d.ts"/>
+import Point = Phaser.Point;
 class mainState extends Phaser.State {
     game: Phaser.Game;
 
@@ -12,8 +13,8 @@ class mainState extends Phaser.State {
     private contador_recogidas = 0; // Contador para los recolectables recogidos
 
     // Sprite elementos
-    private ufo:Phaser.Sprite;          // Jugador platillo
-    private recolectable:Phaser.Sprite; // Recolectable
+    private ufo:Phaser.Sprite;             // Jugador platillo
+    private recolectables:Phaser.Group;    // Recolectables
 
     // Otros recursos
     private cursor:Phaser.CursorKeys;       // Para el movimiento del jugador
@@ -63,28 +64,45 @@ class mainState extends Phaser.State {
         this.ufo.body.collideWorldBounds = true;
         this.ufo.body.bounce.setTo(0.7);
 
-        // RECOLECTABLES
-        this.recolectable = this.add.sprite(this.world.centerX, 170, 'recolectable');
+        // Pickups
+        this.crearRecolectables();
 
-        // Activamos la fisica
-        this.physics.enable(this.recolectable);
-
-        // Le damos una aceleración lineal y angular (para que rote sobre si mismo)
-        this.recolectable.body.maxVelocity.setTo(this.VELOCIDAD_MAXIMA, this.VELOCIDAD_MAXIMA); // x, y
-        //this.ufo.body.angularDrag = this.FUERZA_ROZAMIENTO_ANGULAR;
-
-        // Fuerza de rozamiento
-        this.recolectable.body.drag.setTo(this.FUERZA_ROZAMIENTO, this.FUERZA_ROZAMIENTO); // x, y
-
-        //velocidad maxima, colisiones y rebote
-        this.recolectable.body.maxVelocity.setTo(this.VELOCIDAD_MAXIMA, this.VELOCIDAD_MAXIMA); // x, y
-        this.recolectable.body.collideWorldBounds = true;
-        this.recolectable.body.bounce.setTo(0.7);
     }
 
-    private recogerRecolectable() {
+    crearRecolectables():void {
+
+        // Anyadimos el recolectable a un grupo
+        this.recolectables = this.add.group();
+        this.recolectables.enableBody = true;
+
+        // Posiciones en las que generaremos los recolectables
+        var positions:Point[] = [
+            new Point(300, 95),
+            new Point(190, 135), new Point(410, 135),
+            new Point(120, 200), new Point(480, 200),
+            new Point(95, 300), new Point(505, 300),
+            new Point(120, 405), new Point(480, 405),
+            new Point(190, 465), new Point(410, 465),
+            new Point(300, 505),
+        ];
+
+        // Colocamos los sprites en sus coordenadas a traves de un for
+        for (var i = 0; i < positions.length; i++) {
+
+            var position = positions[i];
+
+            // instanciamos el Sprite
+            var recolectable = new Recolectable(this.game, position.x, position.y, 'recolectable', 0);
+
+            // mostramos el Sprite por pantalla
+            this.add.existing(recolectable);
+            this.recolectables.add(recolectable);
+        }
+    }
+
+    private recogerRecolectable(ufo:Phaser.Sprite, recolectable:Phaser.Sprite) {
         this.contador_recogidas ++;  // Sumamos al contador
-        this.recolectable.kill();    // Nos cargamos el sprite
+        recolectable.kill();    // Nos cargamos el sprite
     }
 
     private generarParedes() {
@@ -106,27 +124,23 @@ class mainState extends Phaser.State {
 
         // Colisiones del jugador (UFO) con las paredes
         this.physics.arcade.collide(this.ufo, this.paredes);
-        this.physics.arcade.collide(this.recolectable, this.paredes)
+
 
         /* Overlap es similar a un trigger de colision. Es decir, gestiona las colisiones pero no de manera "física"
         de los objetos, al superponerse los objetos, ejcuta código*/
-        this.physics.arcade.overlap(this.ufo, this.recolectable, this.recogerRecolectable, null, this);
+        this.physics.arcade.overlap(this.ufo, this.recolectables, this.recogerRecolectable, null, this);
 
         // Movimientos en el eje X
         if (this.cursor.left.isDown) {
             this.ufo.body.acceleration.x = -this.ACCELERATION;
-            this.recolectable.body.acceleration.x = this.ACCELERATION/2;
         } else if (this.cursor.right.isDown) {
             this.ufo.body.acceleration.x = this.ACCELERATION/2;
-            this.recolectable.body.acceleration.x = -this.ACCELERATION/2;
 
             // Movimientos en el eje Y
         } else if (this.cursor.up.isDown) {
             this.ufo.body.acceleration.y = -this.ACCELERATION;
-            this.recolectable.body.acceleration.y = this.ACCELERATION/2;
         } else if (this.cursor.down.isDown) {
             this.ufo.body.acceleration.y = this.ACCELERATION;
-            this.recolectable.body.acceleration.y = -this.ACCELERATION/2;
         } else {
             this.ufo.body.acceleration.x = 0;
             this.ufo.body.acceleration.y = 0;
@@ -140,6 +154,7 @@ class Recolectable extends Phaser.Sprite{
     constructor(game:Phaser.Game, x:number, y:number, key:string|Phaser.RenderTexture|Phaser.BitmapData|PIXI.Texture, frame:string|number) {
         super(game, x, y, key, frame);
 
+        this.anchor.setTo(0.5, 0.5);
         this.game.physics.enable(this);
         this.body.angularVelocity = 150;
     }
